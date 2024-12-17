@@ -1,0 +1,224 @@
+<!doctype html>
+<html lang="es">
+    <head>
+        <meta charset="UTF-8" />
+        <title>I'ts my year</title>
+        <style>
+            body {
+                display: flex;
+                justify-content: center;
+                gap: 20px;
+            }
+
+            .fieldsets-laterales {
+                display: flex;
+                flex-direction: column;
+                gap: 20px;
+            }
+
+            .fieldset-fijo {
+                width: 150px;
+                height: 150px;
+                display: flex;
+                justify-content: center;
+                align-items: center;
+                flex-shrink: 0;
+            }
+
+            .fieldset-principal {
+                min-width: 300px;
+                height: fit-content;
+            }
+
+            .fieldset-interno {
+                width: calc(100% - 20px);
+                box-sizing: border-box;
+                margin: 10px 0;
+            }
+
+            footer {
+                position: fixed;
+                bottom: 0;
+                width: 100%;
+                text-align: center;
+            }
+
+            button,
+            input {
+                border-radius: 0;
+                border: 1px solid black;
+            }
+        </style>
+    </head>
+    <body>
+        <fieldset class="fieldset-principal">
+            <legend>Propósitos año nuevo</legend>
+
+            <fieldset class="fieldset-interno" style="border-color: pink">
+                <legend>Agregar propósito</legend>
+                <form id="formPropositos">
+                    <div>
+                        <label for="nombre">Me proponga a:</label>
+                        <input type="text" id="nombre" required />
+                    </div>
+                    <div>
+                        <label for="descripcion">Descripción:</label><br />
+                        <input type="text" id="descripcion" required />
+                    </div>
+                    <button type="submit">Agregar</button>
+                </form>
+            </fieldset>
+
+            <hr style="margin: 20px 0; border: 1px solid #ccc" />
+
+            <fieldset class="fieldset-interno" style="border-color: #ff7aeb">
+                <legend>Propóstios para el año</legend>
+                <div id="listaPropositos"></div>
+            </fieldset>
+        </fieldset>
+
+        <div class="fieldsets-laterales">
+            <fieldset style="border-color: #f3bdfc">
+                <legend>Datos del servidor</legend>
+                <fieldset class="fieldset-fijo">
+                    <legend>Corriendo en</legend>
+                    <img
+                        src="nixos.svg"
+                        alt="NixOS Logo"
+                        style="
+                            width: 100%;
+                            height: auto;
+                            display: block;
+                            margin: 0 auto;
+                        "
+                    />
+                </fieldset>
+
+                <fieldset class="fieldset-fijo">
+                    <legend>Hecho por:</legend>
+                    <p style="text-align: center; margin: 0">hdezg</p>
+                </fieldset>
+
+                <fieldset class="fieldset-fijo">
+                    <legend>Con:</legend>
+                    <img
+                        src="nodejs.svg"
+                        alt="NodeJS Logo"
+                        style="
+                            width: 100%;
+                            height: auto;
+                            display: block;
+                            margin: 0 auto;
+                        "
+                    />
+                </fieldset>
+            </fieldset>
+        </div>
+
+        <script>
+            async function cargarPropositos() {
+                try {
+                    const response = await fetch(
+                        "http://localhost:3001/misPropositos",
+                    );
+                    const propositos = await response.json();
+                    const listaPropositos =
+                        document.getElementById("listaPropositos");
+                    listaPropositos.innerHTML = "";
+
+                    propositos.forEach((propongo) => {
+                        const propongoElement = document.createElement("div");
+                        propongoElement.innerHTML = `
+                    <p>
+                        ${propongo.nombre}:
+                        ${propongo.descripcion}
+                        <button onclick="eliminarProposito(${propongo.id})">Eliminar</button>
+                        <button onclick="editarProposito(${propongo.id}, '${propongo.nombre}', '${propongo.descripcion}')">Editar</button>
+                    </p>
+                        `;
+                        listaPropositos.appendChild(propongoElement);
+                    });
+                } catch (error) {
+                    console.error("Error:", error);
+                }
+            }
+
+            async function agregarPropositos(e) {
+                e.preventDefault();
+                const nombre = document.getElementById("nombre").value;
+                const descripcion =
+                    document.getElementById("descripcion").value;
+
+                try {
+                    await fetch("http://localhost:3001/misPropositos", {
+                        method: "POST",
+                        headers: {
+                            "Content-Type": "application/json",
+                        },
+                        body: JSON.stringify({ nombre, descripcion }),
+                    });
+
+                    document.getElementById("formPropositos").reset();
+                    cargarPropositos();
+                } catch (error) {
+                    console.error("Error:", error);
+                }
+            }
+
+            async function eliminarProposito(id) {
+                if (confirm("¿Estás seguro de que quieres eliminar?")) {
+                    try {
+                        await fetch(
+                            `http://localhost:3001/misPropositos/${id}`,
+                            {
+                                method: "DELETE",
+                            },
+                        );
+                        cargarPropositos();
+                    } catch (error) {
+                        console.error("Error:", error);
+                    }
+                }
+            }
+
+            async function editarProposito(
+                id,
+                nombreActual,
+                descripcionActual,
+            ) {
+                const nuevoNombre = prompt("Nuevo nombre:", nombreActual);
+                const nuevaDescripcion = prompt(
+                    "Nueva descripción:",
+                    descripcionActual,
+                );
+
+                if (nuevoNombre && nuevaDescripcion) {
+                    try {
+                        await fetch(
+                            `http://localhost:3001/misPropositos/${id}`,
+                            {
+                                method: "PUT",
+                                headers: {
+                                    "Content-Type": "application/json",
+                                },
+                                body: JSON.stringify({
+                                    nombre: nuevoNombre,
+                                    descripcion: nuevaDescripcion,
+                                }),
+                            },
+                        );
+                        cargarPropositos();
+                    } catch (error) {
+                        console.error("Error:", error);
+                    }
+                }
+            }
+
+            document
+                .getElementById("formPropositos")
+                .addEventListener("submit", agregarPropositos);
+
+            cargarPropositos();
+        </script>
+    </body>
+</html>
